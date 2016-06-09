@@ -1,0 +1,247 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Draw your identity</title>
+</head>
+<body><!--
+Copyright (c) Stephen Kelly 2016 <steveire@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
+
+<style>
+  #drawing_container {
+    display: block;
+    height: 805px;
+    width: 1055px;
+  }
+
+  #drawing_header {
+    float: left;
+    height: 100px;
+    width: 955px;
+    border: 5px solid #C8CEDC;
+  }
+
+  #drawing_header p {
+    font-size: 50px;
+    text-align: center;
+    line-height: 10px;
+  }
+
+  #canvasContainer {
+    display: block;
+    margin-top: 5px;
+    margin-left: 5px;
+    border: 5px solid #C8CEDC;
+  }
+
+
+</style>
+
+  <div id="drawing_container">
+    <div id="drawing_header"><p>Render your identity</p></div>
+
+    <textarea id="jsonInput" name="v_1" cols="80" rows="10" oninput="init();"></textarea></textarea>
+
+    <p>Click <a id="downloadLnk" download="your-identity.jpg" href="">here</a> to download the image.</p>
+
+    <div id="canvasContainer">
+      <canvas id="canvas" width="800" height="679"></canvas>
+    </div>
+  </div>
+<script>
+
+var canvas = document.getElementById('canvas'),
+    ctx = canvas.getContext('2d'),
+    drawState = {},
+    shapes = [];
+
+
+function download() {
+    var dt = canvas.toDataURL('image/jpeg');
+    this.href = dt;
+};
+
+function drawEllipse(ctx, x, y, w, h, c){
+
+  ctx.beginPath();
+  ctx.lineWidth="6";
+  ctx.strokeStyle=c;
+
+  ctx.save();
+
+  var scalex = 1*(w/2);
+  var scaley = 1*(h/2);
+  ctx.scale(scalex,scaley);
+
+  var centerx = ((x)/scalex)+1;
+  var centery = ((y)/scaley)+1;
+  ctx.arc(centerx, centery, 1, 0, 2*Math.PI);
+
+  ctx.restore();
+  ctx.stroke();
+}
+
+function selectShape(shapeName)
+{
+  window.currentShape = shapeName;
+
+  var shapeChooser = document.getElementById("shapeChooser");
+
+  var shapes = shapeChooser.getElementsByTagName("li");
+  for (var i = 0; i < shapes.length; ++i)
+  {
+    shapes[i].classList.remove("selected");
+  }
+
+  var choice = document.getElementById(shapeName);
+  choice.classList.add("selected");
+}
+
+function draw() {
+
+  ctx.fillStyle="white";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (var i = 0; i < window.shapes.length; ++i)
+  {
+    var name = window.shapes[i];
+    window[name].draw(ctx);
+  }
+}
+
+function draw2() {
+  ctx.fillStyle="white";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (var i = 0; i < window.shapes.length; ++i)
+  {
+    var name = window.shapes[i];
+    window[name].draw(ctx);
+  }
+}
+
+function getEllipseShapes(jsonObj)
+{
+  var shapes = [];
+  for (var prop in jsonObj)
+  {
+    if (prop.endsWith("_color"))
+    {
+    shapes.push(prop.replace("_color", ""));
+    }
+  }
+  return shapes;
+}
+
+function initShape(shapeName, json)
+{
+  window[shapeName].startX = json[shapeName + "_x"];
+  window[shapeName].startY = json[shapeName + "_y"];
+  window[shapeName].w = json[shapeName + "_w"];
+  window[shapeName].h = json[shapeName + "_h"];
+}
+
+function insertShape(shapeName, displayName, colorName, drawFunction)
+{
+  window[shapeName] = {
+    color: colorName,
+    draw: drawFunction
+  };
+
+  window[shapeName].startX = undefined;
+  window[shapeName].startY = undefined;
+  window[shapeName].w = undefined;
+  window[shapeName].h = undefined;
+}
+
+function init() {
+  var form_json_input = document.getElementsByName('v_1')[0];
+  var form_json = {
+    "family_displayname" : "Family",
+    "family_color" : "#E2DF9A",
+    "religion_displayname" : "Religion",
+    "religion_color" : "#EBE54D",
+    "values_displayname" : "Values",
+    "values_color" : "#757449",
+    "country_displayname" : "Country",
+    "country_color" : "#4B490B",
+    "europe_displayname" : "Europe",
+    "europe_color" : "#FF0051",
+    "other_displayname" : "Other",
+    "other_color" : "grey"
+  };
+
+  // form_json_input.value = "";
+
+  if (form_json_input.value.length > 0)
+  {
+    form_json = JSON.parse(form_json_input.value);
+  }
+
+  window.shapes = getEllipseShapes(form_json);
+
+  insertShape("yourself",
+    "Yourself",
+    "black",
+    function(ctx) {
+      ctx.beginPath();
+      ctx.lineWidth="6";
+      ctx.strokeStyle=this.color;
+      ctx.rect(this.startX, this.startY, this.w, this.h);
+      ctx.stroke();
+    }
+  );
+
+  for (var i = 0; i < window.shapes.length; ++i)
+  {
+    insertShape(window.shapes[i],
+      form_json[window.shapes[i] + "_displayname"],
+      form_json[window.shapes[i] + "_color"],
+      function(ctx) {
+        drawEllipse(ctx, this.startX, this.startY, this.w, this.h, this.color);
+      }
+    );
+  }
+  window.shapes.unshift("yourself");
+
+  if (form_json_input.value.length > 0)
+  {
+    initShape("yourself", form_json)
+    for (var i = 0; i < window.shapes.length; ++i) {
+      initShape(window.shapes[i], form_json)
+    }
+    draw();
+  }
+}
+
+var form_json_input = document.getElementsByName('v_1')[0];
+form_json_input.value = "{\"family_displayname\":\"Family\",\"family_color\":\"#E2DF9A\",\"religion_displayname\":\"Religion\",\"religion_color\":\"#EBE54D\",\"values_displayname\":\"Values\",\"values_color\":\"#757449\",\"country_displayname\":\"Country\",\"country_color\":\"#4B490B\",\"europe_displayname\":\"Europe\",\"europe_color\":\"#FF0051\",\"other_displayname\":\"Other\",\"other_color\":\"grey\",\"yourself_x\":255.5,\"yourself_y\":139.39999389648438,\"yourself_h\":403,\"yourself_w\":258,\"family_x\":152.5,\"family_y\":46.399993896484375,\"family_h\":284,\"family_w\":444,\"religion_x\":168.5,\"religion_y\":274.3999938964844,\"religion_h\":334,\"religion_w\":421}";
+
+init();
+
+downloadLnk.addEventListener('click', download, false);
+
+</script>
+
+</body>
+</html>

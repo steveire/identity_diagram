@@ -1,0 +1,409 @@
+<!--
+Copyright (c) Stephen Kelly 2016 <steveire@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
+
+<style>
+  #drawing_container {
+    display: block;
+    height: 805px;
+    width: 955px;
+  }
+
+  #drawing_header {
+    float: left;
+    height: 100px;
+    width: 955px;
+    border: 5px solid #C8CEDC;
+  }
+
+  #drawing_header p {
+    font-size: 50px;
+    text-align: center;
+    line-height: 80px;
+  }
+
+  #shapeChooser {
+    clear: both;
+    float: left;
+    width: 150px;
+    height: 693px;
+    margin-top: -5px;
+    border: 5px solid #C8CEDC;
+  }
+
+  #shapeList {
+    list-style-type: none;
+    padding:0px;
+    margin:0px;
+    border:0px;
+  }
+
+  #shapeList p {
+    margin-top:0px;
+    margin-bottom:10px;
+    text-align: center;
+  }
+
+  #shapeList canvas {
+    padding:0px;
+    margin:0px;
+    margin-left: 17px;
+    border:0px;
+  }
+
+  #shapeList li.selected {
+    background: #E1E9F4;
+  }
+
+  #canvasContainer {
+    float: left;
+    margin-top: -5px;
+    margin-left: -5px;
+    border: 5px solid #C8CEDC;
+  }
+
+  #drawing_instructions {
+    margin-top: 10px;
+    margin-left: 30px;
+    font-size: 30px;
+    float:left;
+  }
+
+</style>
+
+  <div id="drawing_container">
+    <div id="drawing_header"><p>Draw your identity</p></div>
+
+    <div id="shapeChooser">
+      <ul id="shapeList">
+      </ul>
+    </div>
+
+    <div id="canvasContainer">
+      <canvas id="canvas" width="800" height="679"></canvas>
+    </div>
+  </div>
+
+  <div id="drawing_instructions">
+  <p>Use the keyboard to move the current shape.</p>
+  </div>
+
+  <input name="v_1" type="hidden" />
+
+<script>
+
+function relMouseCoords(event){
+    var rect = this.getBoundingClientRect();
+    var canvasX = event.clientX - rect.left;
+    var canvasY = event.clientY - rect.top;
+
+    return {x:canvasX, y:canvasY}
+}
+HTMLCanvasElement.prototype.relMouseCoords = relMouseCoords;
+
+var canvas = document.getElementById('canvas'),
+    ctx = canvas.getContext('2d'),
+    drag = false,
+    hadDrag = false,
+    drawState = {},
+    shapes = [];
+
+
+function drawEllipse(ctx, x, y, w, h, c){
+
+  ctx.beginPath();
+  ctx.lineWidth="6";
+  ctx.strokeStyle=c;
+
+  ctx.save();
+
+  var scalex = 1*(w/2);
+  var scaley = 1*(h/2);
+  ctx.scale(scalex,scaley);
+
+  var centerx = ((x)/scalex)+1;
+  var centery = ((y)/scaley)+1;
+  ctx.arc(centerx, centery, 1, 0, 2*Math.PI);
+
+  ctx.restore();
+  ctx.stroke();
+}
+
+function selectShape(shapeName)
+{
+  window.currentShape = shapeName;
+
+  var shapeChooser = document.getElementById("shapeChooser");
+
+  var shapes = shapeChooser.getElementsByTagName("li");
+  for (var i = 0; i < shapes.length; ++i)
+  {
+    shapes[i].classList.remove("selected");
+  }
+
+  var choice = document.getElementById(shapeName);
+  choice.classList.add("selected");
+}
+
+function doDraw(obj, ctx, useTempState)
+{
+  if (useTempState)
+  {
+    drawState.draw = obj.draw;
+    drawState.color = obj.color;
+    drawState.draw(ctx);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.lineWidth="1";
+    ctx.strokeStyle="black";
+    ctx.setLineDash([1,2]);
+    ctx.rect(drawState.startX, drawState.startY, drawState.w, drawState.h);
+    ctx.stroke();
+    ctx.restore();
+
+  } else {
+    obj.draw(ctx);
+  }
+}
+
+function draw() {
+
+  ctx.fillStyle="white";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (var i = 0; i < window.shapes.length; ++i)
+  {
+    var name = window.shapes[i];
+    doDraw(window[name], ctx, hadDrag && currentShape === name);
+  }
+}
+
+function updateForm(element, attr, value)
+{
+  var form_json_input = document.getElementsByName('v_1')[0];
+  var form_json = JSON.parse(form_json_input.value);
+  form_json[element + "_" + attr] = value;
+  form_json_input.value = JSON.stringify(form_json);
+}
+
+function mouseDown(e) {
+  var coords = this.relMouseCoords(e);
+  drawState.startX = coords.x;
+  drawState.startY = coords.y;
+
+  drag = true;
+  hadDrag = false;
+  var canvas = document.getElementById('canvas');
+  canvas.style.cursor="crosshair";
+}
+
+function mouseUp() {
+  drag = false;
+  var canvas = document.getElementById('canvas');
+  canvas.style.cursor="default";
+  if (hadDrag) {
+    var shape = window[window.currentShape];
+    shape.startX = drawState.startX;
+    shape.startY = drawState.startY;
+    shape.h = drawState.h;
+    shape.w = drawState.w;
+    updateForm(currentShape, "x", shape.startX);
+    updateForm(currentShape, "y", shape.startY);
+    updateForm(currentShape, "h", shape.h);
+    updateForm(currentShape, "w", shape.w);
+  }
+  hadDrag = false;
+  draw();
+}
+
+function mouseMove(e) {
+  if (drag) {
+    hadDrag = true;
+    var coords = this.relMouseCoords(e);
+    drawState.w = coords.x - drawState.startX;
+    drawState.h = coords.y - drawState.startY;
+
+    draw();
+  }
+}
+
+function keyDown(e) {
+  var shape = window[currentShape]
+  var attr = ""
+  switch(e.keyCode) {
+    case 37:
+      if ((shape.startX > 5 && shape.w > 0) || ((shape.startX + shape.w) > 5 && shape.w < 0)) {
+        shape.startX -= 5;
+        updateForm(currentShape, "x", shape.startX);
+        draw();
+      }
+      break;
+    case 38:
+      if ((shape.startY > 5 && shape.h > 0) || ((shape.startY + shape.h) > 5 && shape.h < 0)) {
+        shape.startY -= 5;
+        updateForm(currentShape, "y", shape.startY);
+        draw();
+      }
+      break;
+    case 39:
+      if ((shape.startX + shape.w < canvas.width && shape.w > 0) || (shape.startX < canvas.width && shape.w < 0)) {
+        shape.startX += 5;
+        updateForm(currentShape, "x", shape.startX);
+        draw();
+      }
+      break;
+    case 40:
+      if ((shape.startY + shape.h < canvas.height && shape.h > 0) || (shape.startY < canvas.height && shape.h < 0)) {
+        shape.startY += 5;
+        updateForm(currentShape, "y", shape.startY);
+        draw();
+      }
+      break;
+    default:
+    break;
+  }
+}
+
+function getEllipseShapes(jsonObj)
+{
+  var shapes = [];
+  for (var prop in jsonObj)
+  {
+    if (prop.endsWith("_color"))
+    {
+    shapes.push(prop.replace("_color", ""));
+    }
+  }
+  return shapes;
+}
+
+function initShape(shapeName, json)
+{
+  window[shapeName].startX = json[shapeName + "_x"];
+  window[shapeName].startY = json[shapeName + "_y"];
+  window[shapeName].w = json[shapeName + "_w"];
+  window[shapeName].h = json[shapeName + "_h"];
+}
+
+function insertShape(shapeList, shapeName, displayName, colorName, drawFunction)
+{
+  var li = document.createElement("li");
+  li.setAttribute("id", shapeName);
+  li.setAttribute("onclick", "selectShape(this.id)");
+  var iCanvas = document.createElement("canvas");
+  iCanvas.setAttribute("width", 100);
+  iCanvas.setAttribute("height", 60);
+  li.appendChild(iCanvas);
+  var p = document.createElement("p");
+  p.innerHTML = displayName;
+  li.appendChild(p);
+  shapeList.appendChild(li);
+  var iCtx = iCanvas.getContext('2d');
+
+  window[li.id] = {
+    color: colorName,
+    draw: drawFunction
+  };
+
+  window[li.id].startX = 10;
+  window[li.id].startY = 10;
+  window[li.id].w = iCanvas.width - 18;
+  window[li.id].h = iCanvas.height - 15;
+  window[li.id].draw(iCtx);
+  window[li.id].startX = undefined;
+  window[li.id].startY = undefined;
+  window[li.id].w = undefined;
+  window[li.id].h = undefined;
+}
+
+function init() {
+  canvas.addEventListener('mousedown', mouseDown, false);
+  canvas.addEventListener('mouseup', mouseUp, false);
+  canvas.addEventListener('mousemove', mouseMove, false);
+  window.addEventListener('keypress', keyDown, false );
+
+  var form_json_input = document.getElementsByName('v_1')[0];
+  var form_json = {
+    "family_displayname" : "Family",
+    "family_color" : "#E2DF9A",
+    "religion_displayname" : "Religion",
+    "religion_color" : "#EBE54D",
+    "values_displayname" : "Values",
+    "values_color" : "#757449",
+    "country_displayname" : "Country",
+    "country_color" : "#4B490B",
+    "europe_displayname" : "Europe",
+    "europe_color" : "#FF0051",
+    "other_displayname" : "Other",
+    "other_color" : "grey"
+  };
+
+  if (form_json_input.value.length > 0)
+  {
+    form_json = JSON.parse(form_json_input.value);
+  }
+
+  window.shapes = getEllipseShapes(form_json);
+
+  var shapeList = document.getElementById("shapeList");
+
+  insertShape(shapeList, "yourself",
+    "Yourself",
+    "black",
+    function(ctx) {
+      ctx.beginPath();
+      ctx.lineWidth="6";
+      ctx.strokeStyle=this.color;
+      ctx.rect(this.startX, this.startY, this.w, this.h);
+      ctx.stroke();
+    }
+  );
+
+  for (var i = 0; i < window.shapes.length; ++i)
+  {
+    insertShape(shapeList, window.shapes[i],
+      form_json[window.shapes[i] + "_displayname"],
+      form_json[window.shapes[i] + "_color"],
+      function(ctx) {
+        drawEllipse(ctx, this.startX, this.startY, this.w, this.h, this.color);
+      }
+    );
+  }
+  window.shapes.unshift("yourself");
+
+  form_json_input.value = JSON.stringify(form_json);
+
+  if (form_json_input.value.length > 0)
+  {
+    initShape("yourself", form_json)
+    for (var i = 0; i < window.shapes.length; ++i) {
+      initShape(window.shapes[i], form_json)
+    }
+    draw();
+  }
+
+  selectShape("yourself");
+}
+
+init();
+
+</script>
