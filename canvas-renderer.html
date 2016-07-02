@@ -176,27 +176,9 @@ function insertShape(shapeName, displayName, colorName, drawFunction)
 
 function init() {
   var form_json_input = document.getElementsByName('v_1')[0];
-  var form_json = {
-    "family_displayname" : "Family",
-    "family_color" : "#E2DF9A",
-    "religion_displayname" : "Religion",
-    "religion_color" : "#EBE54D",
-    "values_displayname" : "Values",
-    "values_color" : "#757449",
-    "country_displayname" : "Country",
-    "country_color" : "#4B490B",
-    "europe_displayname" : "Europe",
-    "europe_color" : "#FF0051",
-    "other_displayname" : "Other",
-    "other_color" : "grey"
-  };
 
-  // form_json_input.value = "";
-
-  if (form_json_input.value.length > 0)
-  {
-    form_json = JSON.parse(form_json_input.value);
-  }
+  console.assert(form_json_input.value.length > 0);
+  form_json = JSON.parse(form_json_input.value);
 
   window.shapes = getEllipseShapes(form_json);
 
