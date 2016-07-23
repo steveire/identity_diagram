@@ -1,0 +1,637 @@
+<!--
+The MIT License (MIT)
+
+Copyright (c) 2015 Winter Mason
+Copyright (c) Stephen Kelly 2016 <steveire@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+-->
+
+<style type="text/css">
+#instructions {
+    width: 800px;
+}
+
+#startButton {
+    float:right;
+}
+
+#experiment_frame {
+    border: 1px solid black;
+    height: 500px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 500px;
+}
+
+#header {
+    height: 120px;
+}
+
+#left_cat {
+    float: left;
+    font-size: 1.5em;
+    margin: 15px;
+}
+
+#right_cat {
+    float: right;
+    font-size: 1.5em;
+    margin: 15px;
+}
+
+#exp_instruct {
+    margin: 15px;
+}
+#word {
+    max-height: 115px;
+    padding-top: 85px;
+    text-align: center;
+    width: 100px;
+}
+.IATitem {
+    display: none;
+    font-size: 1.5em;
+    height: 200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+#wrong {
+    display: none;
+    height: 80px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#under_instruct {
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 10px;
+    width: 600px;
+}
+
+#itemTable {
+    width: 800px;
+    margin: 10px;
+}
+
+#itemTable th {
+    text-align: left;
+}
+
+</style>
+<script type="text/javascript">
+
+var numTargetRounds = 20;
+var numAssociationRounds = 20;
+var numBothRounds = 40;
+
+var shortRounds = false;
+if (shortRounds) {
+    numTargetRounds = 2;
+    numAssociationRounds = 2;
+    numBothRounds = 4;
+}
+
+var template = {
+  "name": "Race",
+  "catA": {
+    "label": "African-American",
+    "datalabel": "A",
+    "itemtype": "img",
+    "items": ["bf1.jpg", "bf2.jpg", "bf3.jpg", "bf4.jpg", "bf5.jpg", "bf6.jpg"]
+  },
+  "catB": {
+    "label": "Caucasian",
+    "datalabel": "C",
+    "itemtype": "img",
+    "items": ["wf1.jpg", "wf2.jpg", "wf3.jpg", "wf4.jpg", "wf5.jpg", "wf6.jpg"]
+  },
+  "cat1": {
+    "label": "Positive",
+    "datalabel": "P",
+    "itemtype": "txt",
+    "items": ["happy", "joyous", "love", "peace", "win", "triumph", "success"]
+  },
+  "cat2": {
+    "label": "Negative",
+    "datalabel": "N",
+    "itemtype": "txt",
+    "items": ["sad", "despair", "war", "hate", "lose", "defeat", "terror"]
+  }
+};
+
+var currentState = "";
+var session = 0;
+var roundnum = 0;
+var roundArray = [];
+
+function initInstructions() {
+    var wrongImage = "images";
+    wrongImage += "/Wrong.jpg";
+    $("#wrong").attr("src", wrongImage);
+
+    $("#startButton").click(function (event) {
+        event.preventDefault();
+    });
+
+    var form_json_input = document.getElementsByName('v_1')[0];
+    form_json_input.value = "";
+
+    $("#clabel1").html(template.cat1.label);
+    $("#clabel2").html(template.cat2.label);
+    $("#clabelA").html(template.catA.label);
+    $("#clabelB").html(template.catB.label);
+    if (template.cat1.itemtype == "txt")
+        { $("#citems1").html(template.cat1.items.join(", ")); }
+    else if (template.cat1.itemtype == "img")
+        { $("#citems1").html("Images of "+template.cat1.label); }
+    if (template.cat2.itemtype == "txt")
+        { $("#citems2").html(template.cat2.items.join(", ")); }
+    else if (template.cat2.itemtype == "img")
+        { $("#citems2").html("Images of "+template.cat2.label); }
+    if (template.catA.itemtype == "txt")
+        { $("#citemsA").html(template.catA.items.join(", ")); }
+    else if (template.catA.itemtype == "img")
+        { $("#citemsA").html("Images of "+template.catA.label); }
+    if (template.catB.itemtype == "txt")
+        { $("#citemsB").html(template.catB.items.join(", ")); }
+    else if (template.catB.itemtype == "img")
+        { $("#citemsB").html("Images of "+template.catB.label); }
+}
+
+function initIAT()
+{
+    $('#instructions').hide();
+    $('#experiment_frame').show();
+    $('#under_instruct').show();
+    document.onkeypress = keyHandler;
+    startIAT();
+}
+
+// Initialize variables, build page & data object, display instructions
+function startIAT()
+{
+    currentState = "instruction";
+
+    // make the target or association words green
+    if (Math.random() < 0.5)
+    {
+        openA = "<font color=green>";
+        closeA = "</font>";
+        open1 = "";
+        close1 = "";
+    }
+    else
+    {
+        open1 = "<font color=green>";
+        close1 = "</font>";
+        openA = "";
+        closeA = "";
+    }
+    buildPage();
+    roundArray = initRounds();
+    instructionPage();
+}
+
+// Adds all images to page (initially hidden) so they are pre-loaded for IAT
+function buildPage()
+{
+    var imagePrefix = "images";
+    imagePrefix += "/";
+    if (template.catA.itemtype == "img")
+    {
+        for (i in template.catA.items)
+        {
+            var itemstr = '<img id="'+template.catA.datalabel+i+'" class="IATitem" src="'+imagePrefix+template.catA.items[i]+'">';
+            $("#exp_instruct").after(itemstr);
+        }
+    }
+    if (template.catB.itemtype == "img")
+    {
+        for (i in template.catB.items)
+        {
+            var itemstr = '<img id="'+template.catB.datalabel+i+'" class="IATitem" src="'+imagePrefix+template.catB.items[i]+'">';
+            $("#exp_instruct").after(itemstr);
+        }
+    }
+    if (template.cat1.itemtype == "img")
+    {
+        for (i in template.cat1.items)
+        {
+            var itemstr = '<img id="'+template.cat1.datalabel+i+'" class="IATitem" src="'+imagePrefix+template.cat1.items[i]+'">';
+            $("#exp_instruct").after(itemstr);
+        }
+    }
+    if (template.cat2.itemtype == "img")
+    {
+        for (i in template.cat2.items)
+        {
+            var itemstr = '<img id="'+template.cat2.datalabel+i+'" class="IATitem" src="'+imagePrefix+template.cat2.items[i]+'">';
+            $("#exp_instruct").after(itemstr);
+        }
+    }
+}
+
+// Round object
+function IATround()
+{
+    this.starttime = 0;
+    this.endtime = 0;
+    this.itemtype = "none";
+    this.category = "none";
+    this.catIndex = 0;
+    this.correct = 0;
+    this.errors = 0;
+}
+
+// Create array for each session & round, with pre-randomized ordering of images
+function initRounds()
+{
+    var roundArray = [];
+    // for each session
+    for (var i=0; i<7; i++)
+    {
+        roundArray[i] = [];
+        switch (i)
+        {
+            case 0:
+            case 4:
+                stype = "target";
+                numrounds = numTargetRounds;
+                break;
+            case 1:
+                stype = "association";
+                numrounds = numAssociationRounds;
+                break;
+            case 2:
+            case 3:
+            case 5:
+            case 6:
+                stype = "both";
+                numrounds = numBothRounds;
+                break;
+
+        }
+        prevIndexA = -1; prevIndex1 = -1;
+        for (var j = 0; j<numrounds; j++)
+        {
+            var round = new IATround();
+
+            if (stype == "target")
+            {
+                round.category = (Math.random() < 0.5 ? template.catA.datalabel : template.catB.datalabel);
+            }
+            else if (stype == "association")
+            {
+                round.category = (Math.random() < 0.5 ? template.cat1.datalabel : template.cat2.datalabel);
+            }
+            else if (stype == "both")
+            {
+                if (j % 2 == 0) { round.category = (Math.random() < 0.5 ? template.catA.datalabel : template.catB.datalabel); }
+                else { round.category = (Math.random() < 0.5 ? template.cat1.datalabel : template.cat2.datalabel); }
+            }
+            // pick a category
+            if (round.category == template.catA.datalabel)
+            {
+                round.itemtype = template.catA.itemtype;
+                if (i < 4) { round.correct = 1; }
+                else { round.correct = 2; }
+
+                // pick an item different from the last
+                do
+                    { round.catIndex = Math.floor(Math.random()*template.catA.items.length); }
+                while (prevIndexA == round.catIndex)
+                prevIndexA = round.catIndex;
+
+            }
+            else if (round.category == template.catB.datalabel)
+            {
+                round.itemtype = template.catB.itemtype;
+                if (i < 4) { round.correct = 2; }
+                else { round.correct = 1; }
+                // pick an item different from the last
+                do
+                    { round.catIndex = Math.floor(Math.random()*template.catB.items.length); }
+                while (prevIndexA == round.catIndex)
+                prevIndexA = round.catIndex;
+            }
+            else if (round.category == template.cat1.datalabel)
+            {
+                round.itemtype = template.cat1.itemtype;
+                round.correct = 1;
+                // pick an item different from the last
+                do
+                    { round.catIndex = Math.floor(Math.random()*template.cat1.items.length); }
+                while (prevIndex1 == round.catIndex)
+                prevIndex1 = round.catIndex;
+            }
+            else if (round.category == template.cat2.datalabel)
+            {
+                round.itemtype = template.cat2.itemtype;
+                round.correct = 2;
+                // pick an item different from the last
+                do
+                    { round.catIndex = Math.floor(Math.random()*template.cat2.items.length); }
+                while (prevIndex1 == round.catIndex)
+                prevIndex1 = round.catIndex;
+            }
+
+            roundArray[i].push(round);
+        }
+    }
+
+    return roundArray;
+}
+
+function endSession() {
+    var form_json_input = document.getElementsByName('v_1')[0];
+    form_json_input.value = JSON.stringify(roundArray);
+    document.getElementById('startButton').form.submit();
+}
+
+var inlineInstructions = {
+
+    "instruct1": `<div>Put your middle or index fingers on the <b>E</b> and <b>I</b> keys of your keyboard.
+Words or images representing the categories at the top will appear one-by-one in the
+middle of the screen. When the item belongs to a category on the left, press the <b>E</b>
+key; when the item belongs to a category on the right, press the <b>I</b> key.  Items
+belong to only one category.  If you make an error, an <font color=red>X</font>
+will appear - fix the error by hitting the other key.</div>
+<br>
+<div>This is a timed sorting task. <b>GO AS FAST AS YOU CAN</b> while making as few
+mistakes as possible. Going too slow or making too many errors will result in an
+uninterpretable score. This task will take about 5 minutes to complete.</div>
+<br>
+<div style="text-align:center">Press the <b>space bar</b> to begin.</div>`,
+
+
+    "instruct2": `<p><b>See above, the categories have changed.</b>  The items for sorting have changed as well.
+The rules, however, are the same.</p>
+<br>
+<p>When the items belong to a category on the left press the <b>E</b> key;
+when the item belongs to a category on the right, press the <b>I</b> key.
+Items belong to only one category.  An <font color=red>X</font> appears after an
+error - fix the error by hitting the other key.  <b>GO AS FAST AS YOU CAN.</b></p>
+<br>
+<div style="text-align:center">Press the <b>space bar</b> to begin.</div>`,
+
+
+    "instruct3": `<p><b>See above, the four categories you saw separately now appear together.</b>
+Remember, each item belongs to only one group. For example, if the categories
+<b>flower</b> and <b>good</b> appeared on separate sides above - pictures or
+words meaning <b>flower</b> would go in the <b>flower</b> category, not the
+<b>good</b> category.</p>
+<br>
+<p>The <font color=green>green</font> and <b>black</b> labels and items may help to
+identify the appropriate category.  Use the <b>E</b> and <b>I</b> keys to categorize items
+into the four groups <b>left</b> and <b>right</b>, and correct errors by hitting the other key.
+</p>
+<br>
+<div style="text-align:center">Press the <b>space bar</b> to begin.</div>`,
+
+
+    "instruct4": `<p><b>Sort the same four categories again</b>
+Remember to go as fast as you can while making as few mistakes as possible.</p>
+<br>
+<p>The <font color=green>green</font> and <b>black</b> labels and items may help to
+identify the appropriate category.  Use the <b>E</b> and <b>I</b> keys to categorize items
+into the four groups <b>left</b> and <b>right</b>, and correct errors by hitting the other key.
+</p>
+<br>
+<div style="text-align:center">Press the <b>space bar</b> to begin.</div>`,
+
+
+    "instruct5": `<p><b>Notice above, there are only two categories and they have switched positions.</b>
+The concept that was previously on the left is now on the right, and the concept that was
+on the right is now on the left.  Practice this new configuration.
+<br>
+Use the <b>E</b> and <b>I</b> keys to categorize left and right, and correct errors
+by hitting the other key.
+<br>
+<div style="text-align:center">Press the <b>space bar</b> to begin.</div>`,
+
+
+    "instruct6": `<p><b>See above, the four categories now appear together in a new configuration.</b>
+Remember, each item belongs to only one group. </p>
+<br>
+<p>The <font color=green>green</font> and <b>black</b> labels and items may help to
+identify the appropriate category.  Use the <b>E</b> and <b>I</b> keys to categorize items
+into the four groups <b>left</b> and <b>right</b>, and correct errors by hitting the other key.
+</p>
+<br>
+<div style="text-align:center">Press the <b>space bar</b> to begin.</div>`,
+
+
+    "instruct7": `<p><b>Sort the same four categories again</b>
+Remember to go as fast as you can while making as few mistakes as possible.</p>
+<br>
+<p>The <font color=green>green</font> and <b>black</b> labels and items may help to
+identify the appropriate category.  Use the <b>E</b> and <b>I</b> keys to categorize items
+into the four groups <b>left</b> and <b>right</b>, and correct errors by hitting the other key.
+</p>
+<br>
+<div style="text-align:center">Press the <b>space bar</b> to begin.</div>`
+};
+
+// insert instruction text based on stage in IAT
+function instructionPage()
+{
+    switch (session)
+    {
+        case 0:
+            $('#left_cat').ready(function() { $('#left_cat').html(openA+template.catA.label+closeA); });
+            $('#right_cat').ready(function() { $('#right_cat').html(openA+template.catB.label+closeA); });
+            break;
+        case 1:
+            $("#left_cat").html(open1+template.cat1.label+close1);
+            $("#right_cat").html(open1+template.cat2.label+close1);
+            break;
+        case 2:
+        case 3:
+            $("#left_cat").html(openA+template.catA.label+closeA+'<br>or<br>'+open1+template.cat1.label+close1);
+            $("#right_cat").html(openA+template.catB.label+closeA+'<br>or<br>'+open1+template.cat2.label+close1);
+            break;
+        case 4:
+            $("#left_cat").html(openA+template.catB.label+closeA);
+            $("#right_cat").html(openA+template.catA.label+closeA);
+            break;
+        case 5:
+        case 6:
+            $("#left_cat").html(openA+template.catB.label+closeA+'<br>or<br>'+open1+template.cat1.label+close1);
+            $("#right_cat").html(openA+template.catA.label+closeA+'<br>or<br>'+open1+template.cat2.label+close1);
+            break;
+    }
+    if (session == 7)
+    {
+        endSession();
+    }
+    else
+    {
+        $('#exp_instruct').html(inlineInstructions["instruct" + (session + 1)]);
+    }
+}
+
+// This monitors for keyboard events
+function keyHandler(kEvent)
+{
+    // move from instructions to session on spacebar press
+    var unicode;
+    if (!kEvent) var kEvent = window.event;
+    if (kEvent.keyCode) unicode = kEvent.keyCode;
+    else if (kEvent.which) unicode = kEvent.which;
+    if (currentState == "instruction" && unicode == 32)
+    {
+        currentState = "play";
+        $('#exp_instruct').html('');
+        displayItem();
+    }
+    // in session
+    if (currentState == "play")
+    {
+        runSession(kEvent);
+    }
+}
+
+// Get the stimulus for this session & round and display it
+function displayItem()
+{
+    var tRound = roundArray[session][roundnum];
+    tRound.starttime = new Date().getTime(); // the time the item was displayed
+    if (tRound.itemtype == "img")
+    {
+        if (tRound.category == template.catA.datalabel)
+            { $("#"+template.catA.datalabel+tRound.catIndex).css("display","block"); }
+        else if (tRound.category == template.catB.datalabel)
+            { $("#"+template.catB.datalabel+tRound.catIndex).css("display","block"); }
+        else if (tRound.category == template.cat1.datalabel)
+            { $("#"+template.cat1.datalabel+tRound.catIndex).css("display","block"); }
+        else if (tRound.category == template.cat2.datalabel)
+            { $("#"+template.cat2.datalabel+tRound.catIndex).css("display","block"); }
+    }
+    else if (tRound.itemtype == "txt")
+    {
+        if (tRound.category == template.catA.datalabel)
+        {
+            $("#word").html(openA+template.catA.items[tRound.catIndex]+closeA)
+            $("#word").css("display","block");
+        }
+        else if (tRound.category == template.catB.datalabel)
+        {
+            $("#word").html(openA+template.catB.items[tRound.catIndex]+closeA)
+            $("#word").css("display","block");
+        }
+        else if (tRound.category == template.cat1.datalabel)
+        {
+            $("#word").html(open1+template.cat1.items[tRound.catIndex]+close1)
+            $("#word").css("display","block");
+        }
+        else if (tRound.category == template.cat2.datalabel)
+        {
+            $("#word").html(open1+template.cat2.items[tRound.catIndex]+close1)
+            $("#word").css("display","block");
+        }
+    }
+}
+
+function runSession(kEvent)
+{
+    var rCorrect = roundArray[session][roundnum].correct;
+    var unicode = kEvent.keyCode? kEvent.keyCode : kEvent.charCode;
+    keyE = (unicode == 69 || unicode == 101 );
+    keyI = (unicode == 73 || unicode == 105 );
+
+    // if correct key (1 & E) or (2 & I)
+    if ((rCorrect == 1 && keyE) || (rCorrect == 2 && keyI))
+    {
+        $("#wrong").css("display","none"); // remove X if it exists
+        roundArray[session][roundnum].endtime = new Date().getTime(); // end time
+        // if more rounds
+        if (roundnum < roundArray[session].length-1)
+        {
+            roundnum++;
+            $(".IATitem").css("display","none"); // hide all items
+            displayItem(); // display chosen item
+        }
+        else
+        {
+            $(".IATitem").css("display","none"); // hide all items
+            currentState = "instruction"; // change state to instruction
+            session++; // move to next session
+            roundnum=0; // reset rounds to 0
+            instructionPage(); // show instruction page
+        }
+    }
+    // incorrect key
+    else if ((rCorrect == 1 && keyI) || (rCorrect == 2 && keyE))
+    {
+        $("#wrong").css("display","block"); // show X
+        roundArray[session][roundnum].errors++; // note error
+    }
+}
+
+$(document).ready(initInstructions);
+
+</script>
+</head>
+<body>
+
+<div id="instructions">
+    <p>In the next task, you will be presented with a set of words or images to classify into groups. This task requires that you classify items as quickly as you can while making as few mistakes as possible. Going too slow or making too many mistakes will result in an uninterpretable score. This part of the study will take about 5 minutes. The following is a list of category labels and the items that belong to each of those categories.</p>
+
+    <table id="itemTable">
+    <tr><th>Category</th><th>Items</th></tr>
+    <tr><td id="clabel1"></td><td id="citems1"></td>
+    <tr><td id="clabel2"></td><td id="citems2"></td>
+    <tr><td id="clabelA"></td><td id="citemsA"></td>
+    <tr><td id="clabelB"></td><td id="citemsB"></td>
+    </table>
+
+    <p>Keep in mind</p>
+    <ul>
+        <li>Keep your index fingers on the 'e' and 'i' keys to enable rapid response.</li>
+        <li>Two labels at the top will tell you which words or images go with each key.</li>
+        <li>Each word or image has a correct classification. Most of these are easy.</li>
+        <li>The test gives no results if you go slow -- Please try to go as fast as possible.</li>
+        <li>Expect to make a few mistakes because of going fast. That's OK.</li>
+        <li>For best results, make sure that your monitor is set to maximum brightness and avoid distractions.</li>
+    </ul>
+
+    <input id="startButton" type="submit" value="Continue" onclick="initIAT();">
+</div>
+
+    <div id="experiment_frame" style="display:none">
+        <div id="header">
+            <div id="left_cat"></div><div id="right_cat"></div>
+        </div>
+        <div id="picture_frame">
+            <div id="exp_instruct"></div>
+            <div id="word" class="IATitem"></div>
+            <img id="wrong" src="Wrong.jpg" alt="Wrong" title="Wrong" border="0">
+        </div>
+    </div>
+
+    <div id="under_instruct" style="display:none">
+    If the <b>E</b> and <b>I</b> keys do not work, click the mouse inside the white box and try again.<br>
+    If the red <font color=red>X</font> appears, press the other key to make the red <font color=red>X</font> go away.
+    </div>
+    <div id="sub" style="display:none"></div>
+
+    <input name="v_1" type="hidden" name="v_1" />
+</body>
