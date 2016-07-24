@@ -199,7 +199,7 @@ function draw() {
 
 function updateForm(element, attr, value)
 {
-  var form_json_input = document.getElementsByName('v_1')[0];
+  var form_json_input = document.getElementsByName('v_7')[0];
   var form_json = JSON.parse(form_json_input.value);
   form_json[element + "_" + attr] = value;
   form_json_input.value = JSON.stringify(form_json);
@@ -341,7 +341,7 @@ function init() {
   canvas.addEventListener('mousemove', mouseMove, false);
   window.addEventListener('keypress', keyDown, false );
 
-  var form_json_input = document.getElementsByName('v_1')[0];
+  var form_json_input = document.getElementsByName('v_7')[0];
   var form_json = {
     "family_displayname" : "Family",
     "family_color" : "#E2DF9A",
