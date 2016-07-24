@@ -359,7 +359,16 @@ function init() {
 
   if (form_json_input.value.length > 0)
   {
-    form_json = JSON.parse(form_json_input.value);
+
+    function isObject(val) {
+        if (val === null) { return false;}
+        return ( (typeof val === 'function') || (typeof val === 'object') );
+    }
+
+    var existingJSON = JSON.parse(form_json_input.value);
+    if (isObject(existingJSON)) {
+        form_json = existingJSON;
+    }
   }
 
   window.shapes = getEllipseShapes(form_json);
