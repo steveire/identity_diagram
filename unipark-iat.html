@@ -362,7 +362,10 @@ function initRounds()
 
 function endSession() {
     var form_json_input = document.getElementsByName('v_1')[0];
-    form_json_input.value = JSON.stringify(roundArray);
+    var results = {};
+    results.template = template;
+    results.roundArray = roundArray;
+    form_json_input.value = JSON.stringify(results);
     document.getElementById('startButton').form.submit();
 }
 
