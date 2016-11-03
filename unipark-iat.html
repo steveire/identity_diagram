@@ -274,22 +274,33 @@ function initRounds()
         switch (i)
         {
             case 0:
-            case 4:
                 stype = "target";
-                numrounds = numTargetRounds;
+                numrounds = 10;
                 break;
             case 1:
                 stype = "association";
-                numrounds = numAssociationRounds;
+                numrounds = 10;
                 break;
             case 2:
+                stype = "both";
+                numrounds = 20;
+                break;
             case 3:
+                stype = "both";
+                numrounds = 40;
+                break;
+            case 4:
+                stype = "target";
+                numrounds = 10;
+                break;
             case 5:
+                stype = "both";
+                numrounds = 20;
+                break;
             case 6:
                 stype = "both";
-                numrounds = numBothRounds;
+                numrounds = 40;
                 break;
-
         }
         prevIndexA = -1; prevIndex1 = -1;
         for (var j = 0; j<numrounds; j++)
