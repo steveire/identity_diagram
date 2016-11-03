@@ -147,6 +147,7 @@ function initInstructions() {
     wrongImage += "/Wrong.jpg";
     $("#wrong").attr("src", wrongImage);
 
+    $('#continueButton').hide();
     $("#footerAccesskeys").hide();
 
     $("#startButton").click(function (event) {
@@ -263,6 +264,90 @@ function IATround()
     this.errors = 0;
 }
 
+// Calculates estimate of effect size to present results to participant
+function calculateIAT()
+{
+    // calculate mean log(RT) for first key trial
+    var compatible = 0;
+    for (i=1; i<roundArray[3].length; i++)
+    {
+        var score = roundArray[3][i].endtime - roundArray[3][i].starttime;
+        if (score < 300) { score = 300; }
+        if (score > 3000) { score = 3000; }
+        compatible += Math.log(score);
+    }
+    compatible /= (roundArray[3].length - 1);
+
+    // calculate mean log(RT) for second key trial
+    var incompatible = 0;
+    for (i=1; i<roundArray[6].length; i++)
+    {
+        var score = roundArray[6][i].endtime - roundArray[6][i].starttime;
+        if (score < 300) { score = 300; }
+        if (score > 3000) { score = 3000; }
+        incompatible += Math.log(score);
+    }
+    incompatible /= (roundArray[6].length - 1);
+
+    // calculate variance log(RT) for first key trial
+    var cvar = 0;
+    for (i=1; i<roundArray[3].length; i++)
+    {
+        var score = roundArray[3][i].endtime - roundArray[3][i].starttime;
+        if (score < 300) { score = 300; }
+        if (score > 3000) { score = 3000; }
+        cvar += Math.pow((Math.log(score) - compatible),2);
+    }
+
+    // calculate variance log(RT) for second key trial
+    var ivar = 0;
+    for (i=1; i<roundArray[6].length; i++)
+    {
+        var score = roundArray[6][i].endtime - roundArray[6][i].starttime;
+        if (score < 300) { score = 300; }
+        if (score > 3000) { score = 3000; }
+        ivar += Math.pow((Math.log(score) - incompatible),2);
+    }
+
+    // calculate t-value
+    var tvalue = (incompatible - compatible) / Math.sqrt(((cvar/39) + (ivar/39))/40);
+
+    // determine effect size from t-value and create corresponding text
+    if (Math.abs(tvalue) > 2.89) { severity = " <b>much more</b> than "; }
+    else if (Math.abs(tvalue) > 2.64) { severity = " <b>more</b> than "; }
+    else if (Math.abs(tvalue) > 1.99) { severity = " <b>a little more</b> than "; }
+    else if (Math.abs(tvalue) > 1.66) { severity = " <b>just slightly more</b> than "; }
+    else { severity = ""; }
+
+    var resulttext = "";
+
+    // put together feedback based on direction & magnitude
+    if (tvalue < 0 && severity != "")
+    {
+        resulttext = "You associate "+openA+template.catB.label+closeA+" with "+open1+template.cat1.label+close1;
+        resulttext += " and "+openA+template.catA.label+closeA+" with "+open1+template.cat2.label+close1+severity;
+        resulttext += "you associate "+openA+template.catA.label+closeA+" with "+open1+template.cat1.label+close1;
+        resulttext += " and "+openA+template.catB.label+closeA+" with "+open1+template.cat2.label+close1+".";
+        // resulttext += "<div>incompatible: "+incompatible+" ("+(ivar/39)+"); compatible: "+compatible+" ("+(cvar/39)+"); tvalue: "+tvalue+"</div>";
+    }
+    else if (tvalue > 0 && severity != "")
+    {
+        resulttext = "You associate "+openA+template.catA.label+closeA+" with "+open1+template.cat1.label+close1;
+        resulttext += " and "+openA+template.catB.label+closeA+" with "+open1+template.cat2.label+close1+severity;
+        resulttext += "you associate "+openA+template.catB.label+closeA+" with "+open1+template.cat1.label+close1;
+        resulttext += " and "+openA+template.catA.label+closeA+" with "+open1+template.cat2.label+close1+".";
+        // resulttext += "<div>incompatible: "+incompatible+" ("+(ivar/39)+"); compatible: "+compatible+" ("+(cvar/39)+"); tvalue: "+tvalue+"</div>";
+    }
+    else
+    {
+        resulttext = "You do not associate "+openA+template.catA.label+closeA;
+        resulttext += " with "+open1+template.cat1.label+close1+" any more or less than you associate ";
+        resulttext += openA+template.catB.label+closeA+" with "+open1+template.cat1.label+close1+".";
+        // resulttext += "<div>incompatible: "+incompatible+" ("+(ivar/39)+"); compatible: "+compatible+" ("+(cvar/39)+"); tvalue: "+tvalue+"</div>";
+    }
+    return resulttext;
+}
+
 // Create array for each session & round, with pre-randomized ordering of images
 function initRounds()
 {
@@ -374,11 +459,25 @@ function initRounds()
 }
 
 function endSession() {
+    document.onkeypress = undefined;
+
     var form_json_input = document.getElementsByName('v_1')[0];
     var results = {};
     results.template = template;
     results.roundArray = roundArray;
+    var resultText = calculateIAT();
+
+    results.resultText = resultText;
+
     form_json_input.value = JSON.stringify(results);
+
+    $('#exp_instruct').html("<div style='text-align:center;padding:20px'>" + resultText + "</div>");
+    currentState == "";
+    $('#continueButton').show();
+}
+
+function submitForm()
+{
     document.getElementById('startButton').form.submit();
 }
 
@@ -641,6 +740,11 @@ $(document).ready(initInstructions);
             <div id="word" class="IATitem"></div>
             <img id="wrong" src="Wrong.jpg" alt="Wrong" title="Wrong" border="0">
         </div>
+         <div align="center">
+           <br/>
+           <br/>
+           <input id="continueButton" type="submit" value="Continue" onclick="submitForm();">
+         </div>
     </div>
 
     <div id="under_instruct" style="display:none">
