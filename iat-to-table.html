@@ -98,9 +98,9 @@ function populateTables()
         for (var rowIndex = 0; rowIndex < numRows; ++rowIndex) {
             var row = $('<tr></tr>');
             var dataRow = inputTable[tableIndex][rowIndex];
-            row.append($('<td></td>').text(dataRow["starttime"]));
-            row.append($('<td></td>').text(dataRow["endtime"]));
-            row.append($('<td></td>').text(getDisplayed(template, dataRow.category, dataRow.catIndex)));
+            row.append($('<td></td>').text(dataRow["start"]));
+            row.append($('<td></td>').text(dataRow["end"]));
+            row.append($('<td></td>').text(getDisplayed(template, dataRow.cat, dataRow.idx)));
             row.append($('<td></td>').text(dataRow["errors"]));
             outputTable.append(row);
         }
