@@ -27,6 +27,90 @@ THE SOFTWARE.
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
 <script>
 
+// Calculates estimate of effect size to present results to participant
+function calculateIAT(template, roundArray)
+{
+    // calculate mean log(RT) for first key trial
+    var compatible = 0;
+    for (i=1; i<roundArray[3].length; i++)
+    {
+        var score = roundArray[3][i].end - roundArray[3][i].start;
+        if (score < 300) { score = 300; }
+        if (score > 3000) { score = 3000; }
+        compatible += Math.log(score);
+    }
+    compatible /= (roundArray[3].length - 1);
+
+    // calculate mean log(RT) for second key trial
+    var incompatible = 0;
+    for (i=1; i<roundArray[6].length; i++)
+    {
+        var score = roundArray[6][i].end - roundArray[6][i].start;
+        if (score < 300) { score = 300; }
+        if (score > 3000) { score = 3000; }
+        incompatible += Math.log(score);
+    }
+    incompatible /= (roundArray[6].length - 1);
+
+    // calculate variance log(RT) for first key trial
+    var cvar = 0;
+    for (i=1; i<roundArray[3].length; i++)
+    {
+        var score = roundArray[3][i].end - roundArray[3][i].start;
+        if (score < 300) { score = 300; }
+        if (score > 3000) { score = 3000; }
+        cvar += Math.pow((Math.log(score) - compatible),2);
+    }
+
+    // calculate variance log(RT) for second key trial
+    var ivar = 0;
+    for (i=1; i<roundArray[6].length; i++)
+    {
+        var score = roundArray[6][i].end - roundArray[6][i].start;
+        if (score < 300) { score = 300; }
+        if (score > 3000) { score = 3000; }
+        ivar += Math.pow((Math.log(score) - incompatible),2);
+    }
+
+    // calculate t-value
+    var tvalue = (incompatible - compatible) / Math.sqrt(((cvar/39) + (ivar/39))/40);
+
+    // determine effect size from t-value and create corresponding text
+    if (Math.abs(tvalue) > 2.89) { severity = " <b>much more</b> than "; }
+    else if (Math.abs(tvalue) > 2.64) { severity = " <b>more</b> than "; }
+    else if (Math.abs(tvalue) > 1.99) { severity = " <b>a little more</b> than "; }
+    else if (Math.abs(tvalue) > 1.66) { severity = " <b>just slightly more</b> than "; }
+    else { severity = ""; }
+
+    var resulttext = "";
+
+    // put together feedback based on direction & magnitude
+    if (tvalue < 0 && severity != "")
+    {
+        resulttext = "You associate "+template.catB.label+" with "+template.cat1.label;
+        resulttext += " and "+template.catA.label+" with "+template.cat2.label+severity;
+        resulttext += "you associate "+template.catA.label+" with "+template.cat1.label;
+        resulttext += " and "+template.catB.label+" with "+template.cat2.label+".";
+        // resulttext += "<div>incompatible: "+incompatible+" ("+(ivar/39)+"); compatible: "+compatible+" ("+(cvar/39)+"); tvalue: "+tvalue+"</div>";
+    }
+    else if (tvalue > 0 && severity != "")
+    {
+        resulttext = "You associate "+template.catA.label+" with "+template.cat1.label;
+        resulttext += " and "+template.catB.label+" with "+template.cat2.label+severity;
+        resulttext += "you associate "+template.catB.label+" with "+template.cat1.label;
+        resulttext += " and "+template.catA.label+" with "+template.cat2.label+".";
+        // resulttext += "<div>incompatible: "+incompatible+" ("+(ivar/39)+"); compatible: "+compatible+" ("+(cvar/39)+"); tvalue: "+tvalue+"</div>";
+    }
+    else
+    {
+        resulttext = "You do not associate "+template.catA.label;
+        resulttext += " with "+template.cat1.label+" any more or less than you associate ";
+        resulttext += template.catB.label+" with "+template.cat1.label+".";
+        // resulttext += "<div>incompatible: "+incompatible+" ("+(ivar/39)+"); compatible: "+compatible+" ("+(cvar/39)+"); tvalue: "+tvalue+"</div>";
+    }
+    return resulttext;
+}
+
 function getSessionTitle(template, sessionNumber)
 {
     switch (sessionNumber)
@@ -79,19 +163,19 @@ function sanitizeData(input)
         "de1.png", "de2.jpg", "de3.jpg", "de4.jpg", "de5.jpg", "de6.jpg",
         "nl1.png", "nl2.jpg", "nl3.jpg", "nl4.jpg", "nl5.jpg", "nl6.jpg",
         "cat1",
-        "Positive", "Gut", "Goed",
+        "Good", "Gut", "Goed",
         "P",
         "txt",
         "happy", "joyous", "love", "peace", "win", "triumph", "success",
         "glücklich", "Frieden", "Vergnügen", "prachtvoll", "Liebe", "Lachen", "Freude",
         "Vreugde", "Liefde", "Vrede", "Genot", "Mooi", "Lachen", "Gelukkig",
         "cat2",
-        "Negative", "Schlecht", "Slecht",
+        "Bad", "Schlecht", "Slecht",
         "N",
         "sad", "despair", "war", "hate", "lose", "defeat", "terror",
         "Qual", "Misserfolg", "Übel", "schrecklich", "grausam", "scheußlich", "böse",
         "Pijn", "Verdriet", "Oorlog", "Haat", "Mislukking", "Terreur", "Wanhoop",
-        "roundArray", "start", "end", "cat", "idx", "correct", "errors"
+        "roundArray", "start", "end", "type", "cat", "idx", "correct", "errors"
     ]
 
     for (var i = 0; i < quotables.length; ++i) {
@@ -116,6 +200,8 @@ function populateTables()
 
     var template = jsonData["template"];
     var inputTable = jsonData["roundArray"];
+
+    $("#outputResult").html(calculateIAT(template, inputTable));
 
     var renderedTables = $("#outputTables").append("<div></div>");
 
@@ -152,6 +238,7 @@ function populateTables()
     // $("#outputTables").append(renderedTables);
 }
 
+
 </script>
 <style>
 table, th, td {
@@ -169,6 +256,12 @@ Paste the JSON into the text box to generate data tables
 </div>
 
 <textarea id="jsonInput" cols="80" rows="10" oninput="populateTables();"></textarea>
+
+<br>
+Result text shown to user:
+<br>
+<div id='outputResult'>
+</div>
 
 <div id='outputTables'>
 Tables will appear here.
