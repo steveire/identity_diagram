@@ -137,6 +137,13 @@ var template = {
   }
 };
 
+if (Math.random() < 0.5)
+{
+    var catA = template.catA;
+    template.catA = template.catB;
+    template.catB = catA;
+}
+
 var currentState = "";
 var session = 0;
 var roundnum = 0;
