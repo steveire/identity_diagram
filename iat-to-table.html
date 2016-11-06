@@ -61,6 +61,46 @@ function getDisplayed(template, category, catIndex)
     return "Unknown";
 }
 
+function sanitizeData(input)
+{
+    var result = input.replace("\n", "");
+
+    var quotables = [
+        "template", "name",
+        "Identity", "Identität",
+        "catA", "label",
+        "European", "Europäisch", "Europees",
+        "datalabel", "A", "itemtype", "img", "items",
+        "eu1.png", "eu2.jpg", "eu3.jpg", "eu4.jpg", "eu5.jpg", "eu6.jpg", "eu7.jpg",
+        "catB",
+        "British", "Deutsch", "Nederlands",
+        "C",
+        "uk1.png", "uk2.jpg", "uk3.jpg", "uk4.jpg", "uk5.jpg", "uk6.jpg",
+        "de1.png", "de2.jpg", "de3.jpg", "de4.jpg", "de5.jpg", "de6.jpg",
+        "nl1.png", "nl2.jpg", "nl3.jpg", "nl4.jpg", "nl5.jpg", "nl6.jpg",
+        "cat1",
+        "Positive", "Gut", "Goed",
+        "P",
+        "txt",
+        "happy", "joyous", "love", "peace", "win", "triumph", "success",
+        "glücklich", "Frieden", "Vergnügen", "prachtvoll", "Liebe", "Lachen", "Freude",
+        "Vreugde", "Liefde", "Vrede", "Genot", "Mooi", "Lachen", "Gelukkig",
+        "cat2",
+        "Negative", "Schlecht", "Slecht",
+        "N",
+        "sad", "despair", "war", "hate", "lose", "defeat", "terror",
+        "Qual", "Misserfolg", "Übel", "schrecklich", "grausam", "scheußlich", "böse",
+        "Pijn", "Verdriet", "Oorlog", "Haat", "Mislukking", "Terreur", "Wanhoop",
+        "roundArray", "start", "end", "cat", "idx", "correct", "errors"
+    ]
+
+    for (var i = 0; i < quotables.length; ++i) {
+        result = result.replace(new RegExp(" " + quotables[i] + " ", "g"), '"' + quotables[i] + '"')
+    }
+
+    return result;
+}
+
 function populateTables()
 {
     $("#outputTables").html("");
@@ -69,6 +109,8 @@ function populateTables()
 
     if (!inputData)
         return;
+
+    inputData = sanitizeData(inputData);
 
     var jsonData = JSON.parse(inputData);
 
