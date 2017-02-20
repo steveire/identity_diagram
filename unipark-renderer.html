@@ -1,0 +1,279 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Draw your identity</title>
+</head>
+<body><!--
+Copyright (c) Stephen Kelly 2016 <steveire@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
+
+<style>
+  #drawing_container {
+    display: block;
+    height: 805px;
+    width: 1055px;
+  }
+
+  #drawing_header {
+    float: left;
+    height: 100px;
+    width: 955px;{ family_displayname : Meine Familie , family_color : #E2DF9A , religion_displayname : Meine Religion , religion_color : #EBE54D , values_displayname : Meine Werte , values_color : #757449 , country_displayname : Deutschland , country_color : #4B490B , europe_displayname : Europa , europe_color : #FF0051 , Ich_x :280.5, Ich_y :274.6999969482422, Ich_h :29, Ich_w :39, europe_x :74.5, europe_y :79.69999694824219, europe_h :417, europe_w :235, country_x :41.5, country_y :204.6999969482422, country_h :179, country_w :257, values_x :153.5, values_y :150.6999969482422, values_h :300, values_w :306, family_x :236.5, family_y :236.6999969482422, family_h :108, family_w :100}
+    border: 5px solid #C8CEDC;
+  }
+
+  #drawing_header p {
+    font-size: 50px;
+    text-align: center;
+    line-height: 10px;
+  }
+
+  #canvasContainer {
+    display: block;
+    margin-top: 5px;
+    margin-left: 5px;
+    border: 5px solid #C8CEDC;
+  }
+
+  #shapeList li {
+    list-style-type: none;
+    padding:0;
+    margin:0;
+    list-style-position:inside;
+    border: 1px solid black;
+  }
+
+</style>
+
+  <div id="drawing_container">
+    <div id="drawing_header"><p>Render your identity</p></div>
+
+    <textarea id="jsonInput" name="v_1" cols="80" rows="10" oninput="init();"></textarea></textarea>
+
+    <p>Click <a id="downloadLnk" download="your-identity.jpg" href="">here</a> to download the image.</p>
+
+    <div id="canvasContainer">
+      <canvas id="canvas" width="800" height="679"></canvas>
+    </div>
+
+    <ul id="shapeList">
+    </ul>
+
+  </div>
+<script type="text/javascript">
+
+var canvas = document.getElementById('canvas'),
+    ctx = canvas.getContext('2d'),
+    drawState = {},
+    shapes = [];
+
+
+function download() {
+    var dt = canvas.toDataURL('image/jpeg');
+    this.href = dt;
+};
+
+function drawEllipse(ctx, x, y, w, h, c){
+
+  ctx.beginPath();
+  ctx.lineWidth="6";
+  ctx.strokeStyle=c;
+
+  ctx.save();
+
+  var scalex = 1*(w/2);
+  var scaley = 1*(h/2);
+  ctx.scale(scalex,scaley);
+
+  var centerx = ((x)/scalex)+1;
+  var centery = ((y)/scaley)+1;
+  ctx.arc(centerx, centery, 1, 0, 2*Math.PI);
+
+  ctx.restore();
+  ctx.stroke();
+}
+
+function selectShape(shapeName)
+{
+  window.currentShape = shapeName;
+
+  var shapeChooser = document.getElementById("shapeChooser");
+
+  var shapes = shapeChooser.getElementsByTagName("li");
+  for (var i = 0; i < shapes.length; ++i)
+  {
+    shapes[i].classList.remove("selected");
+  }
+
+  var choice = document.getElementById(shapeName);
+  choice.classList.add("selected");
+}
+
+function draw() {
+
+  ctx.fillStyle="white";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (var i = 0; i < window.shapes.length; ++i)
+  {
+    var name = window.shapes[i];
+    window[name].draw(ctx);
+  }
+}
+
+function getEllipseShapes(jsonObj)
+{
+  var shapes = [];
+  for (var prop in jsonObj)
+  {
+    if (prop.endsWith("_color"))
+    {
+    shapes.push(prop.replace("_color", ""));
+    }
+  }
+  return shapes;
+}
+
+function initShape(shapeName, json)
+{
+  window[shapeName].startX = json[shapeName + "_x"];
+  window[shapeName].startY = json[shapeName + "_y"];
+  window[shapeName].w = json[shapeName + "_w"];
+  window[shapeName].h = json[shapeName + "_h"];
+}
+
+function insertShape(shapeList, shapeName, displayName, colorName, drawFunction)
+{
+  var li = document.createElement("li");
+  li.setAttribute("id", shapeName);
+  var iCanvas = document.createElement("canvas");
+  iCanvas.setAttribute("width", 100);
+  iCanvas.setAttribute("height", 60);
+  li.appendChild(iCanvas);
+  var p = document.createElement("p");
+  p.innerHTML = displayName;
+  li.appendChild(p);
+  shapeList.appendChild(li);
+  var iCtx = iCanvas.getContext('2d');
+
+  window[shapeName] = {
+    color: colorName,
+    draw: drawFunction
+  };
+
+  window[li.id].startX = 10;
+  window[li.id].startY = 10;
+  window[li.id].w = iCanvas.width - 18;
+  window[li.id].h = iCanvas.height - 15;
+  window[li.id].draw(iCtx);
+  window[shapeName].startX = undefined;
+  window[shapeName].startY = undefined;
+  window[shapeName].w = undefined;
+  window[shapeName].h = undefined;
+}
+
+function uniparkToJson(input)
+{
+  input = input.replace(/^\s*{ /, "{ \"");
+  input = input.split(" : ").join("\" : \"");
+  input = input.split(" , ").join("\" , \"");
+
+  input = input.replace(/(\d), /g, "$1\" , \"");
+  input = input.replace(/ :(\d)/g, "\" : \"$1");
+
+  input = input.replace(/}\s*$/, "\" }");
+
+  input = input.replace("Me_x", "yourself_x");
+  input = input.replace("Me_y", "yourself_y");
+  input = input.replace("Me_w", "yourself_w");
+  input = input.replace("Me_h", "yourself_h");
+
+  input = input.replace("Ich_x", "yourself_x");
+  input = input.replace("Ich_y", "yourself_y");
+  input = input.replace("Ich_w", "yourself_w");
+  input = input.replace("Ich_h", "yourself_h");
+
+  return input;
+}
+
+function init() {
+
+  ctx.fillStyle="white";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  var form_json_input = document.getElementsByName('v_1')[0];
+
+  console.assert(form_json_input.value.length > 0);
+  form_json = JSON.parse(uniparkToJson(form_json_input.value));
+
+  window.shapes = getEllipseShapes(form_json);
+
+  var shapeList = document.getElementById("shapeList");
+  while (shapeList.firstChild) {
+    shapeList.removeChild(shapeList.firstChild);
+  }
+
+  insertShape(shapeList, "yourself",
+    "Yourself",
+    "black",
+    function(ctx) {
+      ctx.beginPath();
+      ctx.lineWidth="6";
+      ctx.strokeStyle=this.color;
+      ctx.rect(this.startX, this.startY, this.w, this.h);
+      ctx.stroke();
+    }
+  );
+
+  for (var i = 0; i < window.shapes.length; ++i)
+  {
+    insertShape(shapeList, window.shapes[i],
+      form_json[window.shapes[i] + "_displayname"],
+      form_json[window.shapes[i] + "_color"],
+      function(ctx) {
+        drawEllipse(ctx, this.startX, this.startY, this.w, this.h, this.color);
+      }
+    );
+  }
+  window.shapes.unshift("yourself");
+
+  if (form_json_input.value.length > 0)
+  {
+    initShape("yourself", form_json)
+    for (var i = 0; i < window.shapes.length; ++i) {
+      initShape(window.shapes[i], form_json)
+    }
+    draw();
+  }
+}
+
+var form_json_input = document.getElementsByName('v_1')[0];
+form_json_input.value = "{ family_displayname : Meine Familie , family_color : #E2DF9A , religion_displayname : Meine Religion , religion_color : #EBE54D , values_displayname : Meine Werte , values_color : #757449 , country_displayname : Deutschland , country_color : #4B490B , europe_displayname : Europa , europe_color : #FF0051 , Ich_x :280.5, Ich_y :274.6999969482422, Ich_h :29, Ich_w :39, europe_x :74.5, europe_y :79.69999694824219, europe_h :417, europe_w :235, country_x :41.5, country_y :204.6999969482422, country_h :179, country_w :257, values_x :153.5, values_y :150.6999969482422, values_h :300, values_w :306, family_x :236.5, family_y :236.6999969482422, family_h :108, family_w :100}";
+
+init();
+
+downloadLnk.addEventListener('click', download, false);
+
+</script>
+
+</body>
+</html>
