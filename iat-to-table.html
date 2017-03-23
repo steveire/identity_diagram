@@ -229,6 +229,7 @@ function populateTables()
         var headerRow = $('<tr></tr>');
         headerRow.append($('<th></th>').append("StartTime"));
         headerRow.append($('<th></th>').append("EndTime"));
+        headerRow.append($('<th></th>').append("Time Taken"));
         headerRow.append($('<th></th>').append("Displayed"));
         headerRow.append($('<th></th>').append("Errors"));
 
@@ -240,6 +241,7 @@ function populateTables()
             var dataRow = inputTable[tableIndex][rowIndex];
             row.append($('<td></td>').text(dataRow["start"]));
             row.append($('<td></td>').text(dataRow["end"]));
+            row.append($('<td></td>').text(dataRow["end"] - dataRow["start"]));
             row.append($('<td></td>').text(getDisplayed(template, dataRow.cat, dataRow.idx)));
             row.append($('<td></td>').text(dataRow["errors"]));
             outputTable.append(row);
