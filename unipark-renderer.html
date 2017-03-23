@@ -197,8 +197,8 @@ function uniparkToJson(input)
   input = input.split(" : ").join("\" : \"");
   input = input.split(" , ").join("\" , \"");
 
-  input = input.replace(/(\d), /g, "$1\" , \"");
-  input = input.replace(/ :(\d)/g, "\" : \"$1");
+  input = input.replace(/(-?\d+\.?\d*), /g, "$1\" , \"");
+  input = input.replace(/ :(-?\d+\.?\d*)/g, "\" : \"$1");
 
   input = input.replace(/}\s*$/, "\" }");
 
