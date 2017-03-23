@@ -149,6 +149,14 @@ function sanitizeData(input)
 {
     var result = input.replace("\n", "");
 
+    result = result.replace("IdentitÃ¤t", "Identität");
+    result = result.replace("EuropÃ¤isch", "Europäisch");
+    result = result.replace("glÃ¼cklich", "glücklich");
+    result = result.replace("VergnÃ¼gen", "Vergnügen");
+    result = result.replace("Ãœbel", "Übel");
+    result = result.replace("scheuÃŸlich", "scheußlich");
+    result = result.replace("bÃ¶se", "böse");
+
     var quotables = [
         "template", "name",
         "Identity", "Identität",
